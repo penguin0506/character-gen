@@ -1,0 +1,25 @@
+{
+  "name": "人設外觀生成器",
+  "short_name": "人設生成",
+  "description": "隨機生成角色外觀特徵，支援鎖定、複製與暫存",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0c0c0e",
+  "theme_color": "#0c0c0e",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "./assets/icons/cover-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/icons/cover-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

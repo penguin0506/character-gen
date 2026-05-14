@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0c0c0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="人設生成">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./assets/icons/cover-192.png">
+<title>人設外觀生成器</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Iansui：本地 WOFF2（離線可用），Space Mono 從 Google Fonts 載入，斷網時降級 */
+@font-face {
+  font-family: 'Iansui';
+  src: url('./assets/fonts/Iansui-Regular.woff2') format('woff2'),
+       url('./assets/fonts/Iansui-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: local('Space Mono'), local('Courier New'), local('monospace');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: local('Space Mono Bold'), local('Space Mono'), local('Courier New'), local('monospace');
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --bg: #0c0c0e;
+  --surface: #131316;
+  --card: #1a1a1f;
+  --border: #2a2a32;
+  --accent: #8899bb;
+  --accent2: #6688aa;
+  --accent3: #8899bb;
+  --text: #d8dce4;
+  --muted: #d8dce4;
+  --locked: #c8a84a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Iansui', sans-serif; min-height: 100vh; }
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(136,153,187,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(136,153,187,0.03) 1px,transparent 1px);
+  background-size: 48px 48px;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; position: relative; }
+header { text-align: center; margin-bottom: 40px; }
+.eyebrow { font-family: 'Iansui','Space Mono',monospace; font-size: 10px; letter-spacing: 5px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
+h1 {
+  font-size: clamp(26px,5vw,44px); font-weight: 300; letter-spacing: 0.08em;
+  background: linear-gradient(135deg,#9aaace 0%,#7a9abc 50%,#b8c4d8 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px;
+}
+.subtitle { font-family: 'Iansui','Space Mono',monospace; font-size: 11px; color: var(--muted); }
+.gen-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; max-width: 420px; margin: 0 auto 16px; padding: 21px;
+  background: linear-gradient(135deg,#1a1e2e,#2a3550,#364060); border: none; border-radius: 19px;
+  color: white; font-family: 'Iansui','Space Mono',monospace; font-size: 17px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all 0.3s;
+}
+.gen-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(136,153,187,0.25); }
+.gen-btn:active { transform: translateY(0); }
+.gen-btn.rolling { animation: btnPulse 0.4s ease; }
+@keyframes btnPulse { 0%{transform:scale(1)} 40%{transform:scale(0.97)} 100%{transform:scale(1)} }
+.hint { text-align: center; font-family: 'Iansui','Space Mono',monospace; font-size: 13px; color: var(--muted); margin-bottom: 32px; letter-spacing: 1px; }
+.hint .lock-icon { color: var(--locked); display: inline-flex; align-items: center; vertical-align: middle; }
+
+/* Base trait cards */
+.results-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(258px,1fr)); gap: 15px; margin-bottom: 17px; }
+.trait-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 17px;
+  padding: 17px 19px; display: flex; align-items: center; gap: 15px; transition: border-color 0.2s,box-shadow 0.2s;
+}
+.trait-card.locked { border-color: var(--locked); box-shadow: 0 0 0 1px rgba(251,191,36,0.15),inset 0 0 20px rgba(251,191,36,0.03); }
+.trait-card.just-changed { animation: cardPop 0.35s ease; }
+@keyframes cardPop { 0%{transform:scale(1)} 40%{transform:scale(1.03)} 100%{transform:scale(1)} }
+.trait-icon {
+  font-size: 26px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border-radius: 13px; border: 1px solid var(--border); flex-shrink: 0;
+}
+.trait-card.locked .trait-icon { border-color: rgba(251,191,36,0.3); }
+
+/* ===== 字型：全部走 Iansui（含英數），Space Mono 只用於程式碼標籤 ===== */
+/* 注意：font-family 優先順序高，Iansui 包含英數所以會蓋掉 Space Mono */
+/* 若要讓標籤類文字用等寬字型，保留 font-family 宣告在各元件上即可 */
+
+/* ===== 圖示尺寸 ===== */
+
+/* 特徵卡片主圖示（髮色/眼型等）28px */
+.trait-img-icon {
+  width: 28px; height: 28px;
+  object-fit: contain; display: block;
+}
+/* 特殊外觀列圖示 28px */
+.special-img-icon {
+  width: 28px; height: 28px;
+  object-fit: contain; display: block;
+}
+.trait-icon, .special-row-icon { overflow: hidden; }
+
+/* 鎖頭按鈕圖示 18px（lock-img class，由 character-app.js 輸出） */
+.lock-img {
+  width: 18px; height: 18px;
+  object-fit: contain; display: block;
+}
+
+/* 標題列圖示（特殊外觀 header、modal title）20px */
+.title-img {
+  width: 20px; height: 20px;
+  object-fit: contain;
+  display: inline-block; vertical-align: middle;
+}
+
+/* 垃圾桶圖示（stash 刪除、delete modal）16px */
+.del-img {
+  width: 16px; height: 16px;
+  object-fit: contain;
+  display: inline-block; vertical-align: middle;
+}
+
+/* hint 列的鎖頭 16px（index.html 靜態 img） */
+.lock-icon .trait-img-icon {
+  width: 16px; height: 16px;
+  display: inline-block; vertical-align: middle;
+}
+/* 生成按鈕 dice 22px */
+.gen-btn .trait-img-icon {
+  width: 22px; height: 22px;
+  display: inline-block; vertical-align: middle;
+}
+/* copy 按鈕 18px */
+.copy-btn .trait-img-icon {
+  width: 18px; height: 18px;
+  display: inline-block; vertical-align: middle;
+}
+/* stash 標題 pin 16px */
+.stash-title .trait-img-icon {
+  width: 16px; height: 16px;
+  display: inline-block; vertical-align: middle;
+}
+.trait-info { flex: 1; min-width: 0; }
+.trait-label { font-family: 'Iansui','Space Mono',monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.trait-value { font-size: 16px; color: var(--text); line-height: 1.4; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.color-pip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); }
+.lock-btn {
+  background: none; border: 1px solid var(--border); border-radius: 11px; width: 33px; height: 33px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;
+  flex-shrink: 0; transition: all 0.2s; color: var(--muted);
+}
+.lock-btn:hover { border-color: var(--locked); color: var(--locked); }
+.trait-card.locked .lock-btn { border-color: var(--locked); background: rgba(251,191,36,0.1); color: var(--locked); }
+
+/* Rarity badges */
+.rarity { font-family: 'Iansui','Space Mono',monospace; font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; flex-shrink: 0; }
+.r-rare   { background: rgba(80,130,220,0.15); color: #6a9ee0; }
+.r-epic   { background: rgba(140,100,210,0.15); color: #a07ed4; }
+.r-legend { background: rgba(210,175,60,0.15); color: #d4af3c; }
+
+/* Specials section */
+.specials-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+.specials-header { padding: 16px 21px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.specials-title { font-family: 'Iansui','Space Mono',monospace; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+.specials-body { padding: 17px 19px; display: flex; flex-direction: column; gap: 11px; }
+.special-row {
+  display: flex; align-items: center; gap: 15px; padding: 13px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 13px; transition: border-color 0.2s;
+}
+.special-row.locked { border-color: var(--locked); box-shadow: 0 0 0 1px rgba(251,191,36,0.12); }
+.special-row.just-changed { animation: cardPop 0.35s ease; }
+.special-row-icon {
+  font-size: 22px; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border-radius: 13px; border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.special-row-info { flex: 1; min-width: 0; }
+.special-row-label { font-family: 'Iansui','Space Mono',monospace; font-size: 12px; color: var(--muted); letter-spacing: 1px; margin-bottom: 2px; }
+.special-row-value { font-size: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.spec-lock-btn {
+  background: none; border: 1px solid var(--border); border-radius: 10px; padding: 6px 13px;
+  cursor: pointer; font-size: 13px; font-family: 'Iansui','Space Mono',monospace; letter-spacing: 1px;
+  color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+}
+.spec-lock-btn:hover { border-color: var(--locked); color: var(--locked); }
+.spec-lock-btn.on { border-color: var(--locked); background: rgba(251,191,36,0.1); color: var(--locked); }
+
+/* Copy modal */
+.copy-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; max-width: 420px; margin: 0 auto;
+  padding: 15px; background: var(--surface); border: 1px solid var(--border); border-radius: 15px;
+  color: var(--muted); font-family: 'Iansui','Space Mono',monospace; font-size: 14px; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+}
+.copy-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+/* Copy modal overlay */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.modal {
+  background: var(--card); border: 1px solid var(--border); border-radius: 23px;
+  width: 100%; max-width: 560px; overflow: hidden; animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-header {
+  padding: 21px 25px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-family: 'Iansui','Space Mono',monospace; font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+.modal-close {
+  background: none; border: 1px solid var(--border); border-radius: 11px; width: 32px; height: 32px;
+  cursor: pointer; color: var(--muted); font-size: 17px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.modal-close:hover { border-color: var(--accent2); color: var(--accent2); }
+.modal-body { padding: 23px 25px; }
+.lang-tabs { display: flex; gap: 11px; margin-bottom: 19px; }
+.lang-tab {
+  flex: 1; padding: 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 13px;
+  cursor: pointer; font-family: 'Iansui','Space Mono',monospace; font-size: 14px; letter-spacing: 1px;
+  color: var(--muted); transition: all 0.2s; text-align: center;
+}
+.lang-tab:hover { border-color: var(--accent); color: var(--accent); }
+.lang-tab.active { border-color: var(--accent); background: rgba(136,153,187,0.1); color: var(--accent); }
+.preview-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 13px;
+  padding: 17px 19px; font-size: 16px; line-height: 1.7; color: var(--text);
+  min-height: 80px; margin-bottom: 14px; white-space: pre-wrap; word-break: break-word;
+}
+.modal-copy-btn {
+  width: 100%; padding: 15px; background: linear-gradient(135deg,#1a1e2e,#2a3550);
+  border: none; border-radius: 13px; color: white; font-family: 'Iansui','Space Mono',monospace;
+  font-size: 15px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
+}
+.modal-copy-btn:hover { opacity: 0.85; }
+
+/* Empty / no-specials */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); font-family: 'Iansui','Space Mono',monospace; font-size: 15px; letter-spacing: 1px; }
+.empty-state .big-icon { font-size: 52px; margin-bottom: 16px; opacity: 0.4; }
+.no-specials { text-align: center; padding: 21px; color: var(--muted); font-family: 'Iansui','Space Mono',monospace; font-size: 14px; }
+
+/* Stash section */
+.stash-section { margin-top: 32px; }
+.stash-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.stash-title { font-family: 'Iansui','Space Mono',monospace; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent3); display: inline-flex; align-items: center; gap: 6px; }
+.stash-title .trait-img-icon { width: 16px; height: 16px; }
+.stash-count { font-family: 'Iansui','Space Mono',monospace; font-size: 13px; color: var(--muted); }
+.stash-empty { text-align:center; padding: 27px; background: var(--card); border: 1px dashed var(--border); border-radius: 17px; font-family: 'Iansui','Space Mono',monospace; font-size: 14px; color: var(--muted); }
+.stash-list { display: flex; flex-direction: column; gap: 10px; }
+.stash-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 15px;
+  padding: 17px 19px; display: flex; align-items: flex-start; gap: 15px;
+  transition: border-color 0.2s;
+}
+.stash-card:hover { border-color: var(--accent); }
+.stash-card-num {
+  font-family: 'Iansui','Space Mono',monospace; font-size: 13px; color: var(--accent3);
+  background: rgba(136,153,187,0.1); border: 1px solid rgba(136,153,187,0.2);
+  border-radius: 9px; padding: 4px 9px; flex-shrink: 0; margin-top: 2px;
+}
+.stash-card-body { flex: 1; min-width: 0; }
+.stash-card-zh { font-size: 15px; color: var(--text); line-height: 1.6; margin-bottom: 4px; word-break: break-all; }
+.stash-card-en { font-size: 14px; color: var(--muted); line-height: 1.5; font-family: 'Iansui','Space Mono',monospace; word-break: break-all; }
+.stash-card-time { font-family: 'Iansui','Space Mono',monospace; font-size: 12px; color: var(--muted); margin-top: 6px; letter-spacing: 1px; }
+.stash-del-btn {
+  background: none; border: 1px solid var(--border); border-radius: 11px;
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px; color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+}
+.stash-del-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* Delete-one modal */
+.del-modal { max-width: 560px; }
+.del-modal-list { display: flex; flex-direction: column; gap: 11px; margin-bottom: 19px; }
+.del-modal-item {
+  display: flex; align-items: center; gap: 13px; padding: 13px 17px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 13px;
+  cursor: pointer; transition: all 0.2s;
+}
+.del-modal-item:hover { border-color: var(--accent); background: rgba(136,153,187,0.05); }
+.del-modal-item-num { font-family: 'Iansui','Space Mono',monospace; font-size: 13px; color: var(--accent3); flex-shrink: 0; width: 20px; }
+.del-modal-item-text { flex:1; font-size: 15px; color: var(--text); line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.del-modal-item-x { font-size: 17px; color: var(--muted); flex-shrink: 0; }
+.del-modal-hint { font-family: 'Iansui','Space Mono',monospace; font-size: 13px; color: var(--muted); text-align: center; }
+
+/* ===== RWD ===== */
+/* 平板以下 */
+@media (max-width: 600px) {
+  .container { padding: 24px 14px 60px; }
+
+  /* 特徵卡片：單欄 */
+  .results-grid { grid-template-columns: 1fr; gap: 10px; }
+
+  /* 卡片內間距縮小 */
+  .trait-card { padding: 13px 14px; gap: 11px; }
+  .trait-icon { width: 38px; height: 38px; font-size: 22px; }
+  .trait-value { font-size: 14px; }
+  .trait-label { font-size: 11px; }
+
+  /* 鎖頭按鈕 */
+  .lock-btn { width: 30px; height: 30px; }
+
+  /* 特殊外觀列 */
+  .special-row { padding: 10px 12px; gap: 11px; }
+  .special-row-icon { width: 38px; height: 38px; font-size: 20px; }
+  .special-row-value { font-size: 14px; }
+  .spec-lock-btn { padding: 5px 10px; font-size: 12px; }
+
+  /* 生成按鈕 */
+  .gen-btn { font-size: 14px; padding: 17px; letter-spacing: 2px; }
+
+  /* 複製人設按鈕 */
+  .copy-btn { font-size: 13px; padding: 13px; }
+
+  /* Modal：靠上顯示 + 可滾動，避免長內容被截 */
+  .modal-overlay { align-items: flex-start; padding: 16px; overflow-y: auto; }
+  .modal { border-radius: 17px; margin: auto; }
+  .modal-header { padding: 15px 17px; }
+  .modal-body { padding: 17px; }
+  .lang-tabs { gap: 8px; }
+  .lang-tab { padding: 9px; font-size: 13px; }
+  .preview-box { font-size: 14px; padding: 13px 14px; }
+  .modal-copy-btn { font-size: 13px; padding: 13px; }
+
+  /* Stash */
+  .stash-card { padding: 13px 14px; }
+  .stash-card-zh { font-size: 14px; }
+  .stash-card-en { font-size: 12px; }
+
+  /* Delete modal */
+  .del-modal-item { padding: 11px 13px; }
+  .del-modal-item-text { font-size: 14px; }
+}
+
+/* 極小螢幕（舊 iPhone SE 等 320px） */
+@media (max-width: 360px) {
+  .container { padding: 18px 10px 50px; }
+  .gen-btn { font-size: 13px; padding: 15px; }
+  .trait-card { padding: 11px 11px; }
+  .specials-header { padding: 12px 14px; }
+  .specials-body { padding: 12px 13px; gap: 8px; }
+  .copy-btn { font-size: 12px; padding: 11px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="eyebrow">Character Creator</div>
+    <h1>人設外觀生成器</h1>
+    <div class="subtitle">// fully random · no setup required</div>
+  </header>
+
+  <button class="gen-btn" id="genBtn" onclick="generate()"><img class="trait-img-icon" src="./assets/icons/dice.png" alt=""> 隨機生成外觀</button>
+  <div class="hint"><span class="lock-icon"><img class="trait-img-icon" src="./assets/icons/lock.png" alt="lock"></span> 點卡片右側鎖頭可固定單項，特殊外觀可逐條鎖定</div>
+
+  <div id="mainContent">
+    <div class="empty-state">
+      按下按鈕開始生成你的外觀
+    </div>
+  </div>
+
+  <button class="copy-btn" id="copyBtn" onclick="openCopyModal()" style="display:none"><img class="trait-img-icon" src="./assets/icons/copy.png" alt=""> 複製人設</button>
+
+  <!-- Stash section -->
+  <div class="stash-section" id="stashSection">
+    <div class="stash-header">
+      <span class="stash-title"><img class="trait-img-icon" src="./assets/icons/pin.png" alt=""> 暫存區</span>
+      <span class="stash-count" id="stashCount">0 / 5</span>
+    </div>
+    <div class="stash-empty" id="stashEmpty">尚無暫存記錄，複製人設時自動儲存</div>
+    <div class="stash-list" id="stashList" style="display:none"></div>
+  </div>
+
+</div>
+
+<script src="character-data.js"></script>
+<script src="character-app.js"></script>
+<script>
+  // 註冊 Service Worker（需要 HTTPS 或 localhost）
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .catch(err => console.warn('SW 註冊失敗:', err));
+    });
+  }
+</script>
+</body>
+</html>
