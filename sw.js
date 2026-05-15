@@ -46,8 +46,8 @@ const PRECACHE_URLS = [
   './assets/icons/warning.png',
   './assets/icons/garbage.png',
   // App 圖示
-  './assets/icons/icon-192.png',
-  './assets/icons/icon-512.png',
+  './assets/icons/cover-192.png',
+  './assets/icons/cover-512.png',
 ];
 
 // ===== Install：預先快取所有靜態資源 =====
