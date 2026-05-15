@@ -28,6 +28,7 @@ const UI_ICONS = {
   glow: './assets/icons/glow.png',
   accessory: './assets/icons/accessory.png',
   beard: './assets/icons/beard.png',
+  earType: './assets/icons/ear_type.png',
   lock: './assets/icons/lock.png',
   unlock: './assets/icons/unlock.png',  
   pin: './assets/icons/pin.png',
@@ -110,6 +111,14 @@ const EYE_TYPES = [
   {name:'下垂眼（帶憂鬱感）',en:'droopy eyes'},{name:'細長眼',en:'narrow eyes'},
   {name:'單眼皮小眼',en:'monolid eyes'},{name:'雙眼皮大眼',en:'double-lidded wide eyes'},
   {name:'深邃歐式眼',en:'deep-set eyes'},
+];
+const EAR_TYPES = [
+  {name:'普通耳',en:'normal ears'},
+  {name:'短尖耳',en:'short pointed ears'},
+  {name:'長尖耳（妖精耳）',en:'long pointed ears (elf ears)'},
+  {name:'魚鰭耳',en:'fin-shaped ears'},
+  {name:'翅耳',en:'wing-shaped ears'},
+  {name:'圓耳（精靈族）',en:'round fae ears'},
 ];
 const SKIN_TONES = [
   {name:'透瓷白',hex:'#fae8e0',en:'porcelain white'},{name:'奶油象牙',hex:'#f5e0c8',en:'ivory cream'},

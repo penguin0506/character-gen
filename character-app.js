@@ -137,6 +137,7 @@ function generate(){
   }
   d.eye      = locked.eye       || pick(EYE_COLORS);
   d.eyeType  = locked.eyeType   || pick(EYE_TYPES);
+  d.earType  = locked.earType   || pick(EAR_TYPES);
   d.skin     = locked.skin      || pick(SKIN_TONES);
 
   // Build specials: start from locked ones, fill rest from pool
@@ -185,6 +186,7 @@ function render(d, prev){
     {key:'bangs',icon:UI_ICONS.bangs,label:'瀏海',val:d.bangs.name},
     {key:'eye',icon:UI_ICONS.eye, label:'瞳色',val:`<span class="color-pip" style="background:${d.eye.hex}"></span>${d.eye.name}`},
     {key:'eyeType',icon:UI_ICONS.eyeType,label:'眼型',val:d.eyeType.name},
+    {key:'earType',icon:UI_ICONS.earType,label:'耳型',val:d.earType.name},
     {key:'skin',icon:UI_ICONS.skin, label:'膚色',val:`<span class="color-pip" style="background:${d.skin.hex}"></span>${d.skin.name}`},
   ];
 
@@ -208,13 +210,16 @@ function render(d, prev){
                     : (isLocked?'解除鎖定':'鎖定此項');
     const lockIcon = isLocked ? `<img class="lock-img" src="${UI_ICONS.lock}" alt="locked">` : `<img class="lock-img" src="${UI_ICONS.unlock}" alt="unlock">`;
     const lockDisabled = isDisabled ? 'style="opacity:0.4;cursor:not-allowed"' : '';
+    const lockOnClick = isDisabled
+      ? `showToast('${lockTitle}')`
+      : `toggleLock('${t.key}')`;
     html+=`<div class="trait-card ${isLocked?'locked':''} ${changed?'just-changed':''}" id="card-${t.key}">
       <div class="trait-icon">${renderIcon(t.icon, 'trait-img-icon')}</div>
       <div class="trait-info">
         <div class="trait-label">${t.label}</div>
         <div class="trait-value">${t.val}</div>
       </div>
-      <button class="lock-btn" onclick="toggleLock('${t.key}')" title="${lockTitle}" ${lockDisabled}>${lockIcon}</button>
+      <button class="lock-btn" onclick="${lockOnClick}" title="${lockTitle}" ${lockDisabled}>${lockIcon}</button>
     </div>`;
   });
   html+='</div>';
@@ -341,6 +346,7 @@ function buildText(lang){
   const bangs = lang==='en'?d.bangs.en:d.bangs.name;
   const eye = lang==='en'?d.eye.en:d.eye.name;
   const eyeType = lang==='en'?d.eyeType.en:d.eyeType.name;
+  const earType = lang==='en'?d.earType.en:d.earType.name;
   const skin = lang==='en'?d.skin.en:d.skin.name;
 
   // 若有異色瞳特殊條件，主瞳色由異色瞳描述取代
@@ -353,6 +359,7 @@ function buildText(lang){
     parts.push(bangs);
     if(!hasHetero) parts.push(`${eye} eyes`);
     parts.push(eyeType);
+    if(d.earType.name !== '正常耳') parts.push(earType);
     parts.push(`${skin} skin`);
     d.specials.forEach(s=>{
       const val=s.value?.en??s.value;
@@ -370,6 +377,7 @@ function buildText(lang){
     parts.push(bangs);
     if(!hasHetero) parts.push(eye+'瞳色');
     parts.push(eyeType);
+    if(d.earType.name !== '正常耳') parts.push(earType);
     parts.push(skin+'膚色');
     d.specials.forEach(s=>{
       const val=s.value?.zh??s.value;

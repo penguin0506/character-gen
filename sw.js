@@ -1,6 +1,6 @@
 // sw.js — Service Worker
 // 更新版本號可強制讓所有裝置重新下載最新資源
-const CACHE_NAME = 'character-gen-v1';
+const CACHE_NAME = 'character-gen-v2';
 
 // 初次安裝時快取的靜態資源清單
 // 若日後新增圖示或字型，記得加到這裡
@@ -35,6 +35,7 @@ const PRECACHE_URLS = [
   './assets/icons/glow.png',
   './assets/icons/accessory.png',
   './assets/icons/beard.png',
+  './assets/icons/ear_type.png',
   './assets/icons/lock.png',
   './assets/icons/unlock.png',
   './assets/icons/pin.png',
@@ -45,8 +46,8 @@ const PRECACHE_URLS = [
   './assets/icons/warning.png',
   './assets/icons/garbage.png',
   // App 圖示
-  './assets/icons/cover-192.png',
-  './assets/icons/cover-512.png',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
 ];
 
 // ===== Install：預先快取所有靜態資源 =====
