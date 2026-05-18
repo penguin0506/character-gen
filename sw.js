@@ -1,6 +1,6 @@
 // sw.js — Service Worker
 // 更新版本號可強制讓所有裝置重新下載最新資源
-const CACHE_NAME = 'character-gen-v2';
+const CACHE_NAME = 'character-gen-v3';
 
 // 初次安裝時快取的靜態資源清單
 // 若日後新增圖示或字型，記得加到這裡
