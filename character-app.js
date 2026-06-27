@@ -318,11 +318,17 @@ function openCopyModal(){
         </div>
         <div class="preview-box" id="previewBox"></div>
         <button class="modal-copy-btn" onclick="doModalCopy()">複製到剪貼簿</button>
+        <button class="modal-line-btn" id="lineShareBtn" onclick="doLineShare()">分享到 LINE</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e=>{ if(e.target===overlay) closeCopyModal(); });
   updatePreview();
+  // 若在 LINE 環境（LIFF 已就緒），顯示分享鈕；否則維持隱藏，其他人完全看不到
+  if(window.__liffReady){
+    const lb=document.getElementById('lineShareBtn');
+    if(lb) lb.style.display='block';
+  }
 }
 
 function closeCopyModal(){
@@ -418,8 +424,37 @@ function doModalCopy(){
   });
 }
 
-// ===== STASH =====
-const MAX_STASH = 5;
+// ===== LIFF 分享（只有在 LINE 裡才會被觸發）=====
+// 若分享鈕的彈窗在 LIFF 就緒前就被開過，這個函式可補顯示（由 load 流程呼叫）
+function showLineShareButton(){
+  const lb=document.getElementById('lineShareBtn');
+  if(lb) lb.style.display='block';
+}
+
+function doLineShare(){
+  // 沿用彈窗目前選的語言，產出跟「複製」一樣的文字
+  let text='';
+  if(copyModalLang==='both'){
+    text=buildText('zh')+'\n\n'+buildText('en');
+  } else {
+    text=buildText(copyModalLang);
+  }
+  try{
+    if(typeof liff==='undefined' || !liff.isApiAvailable || !liff.isApiAvailable('shareTargetPicker')){
+      alert('分享功能僅在 LINE 內可用');
+      return;
+    }
+    liff.shareTargetPicker([{ type:'text', text }])
+      .then(()=>{
+        const btn=document.getElementById('lineShareBtn');
+        if(btn){ btn.textContent='已開啟分享！'; setTimeout(()=>{btn.textContent='分享到 LINE';},2000); }
+        saveToStash();
+      })
+      .catch(err=>{ console.warn('分享取消或失敗：', err); });
+  }catch(e){
+    console.warn('shareTargetPicker 失敗：', e);
+  }
+}
 let stashList = []; // [{zh, en, time}]
 
 function saveToStash(){

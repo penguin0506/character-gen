@@ -246,6 +246,14 @@ h1 {
   font-size: 15px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
 }
 .modal-copy-btn:hover { opacity: 0.85; }
+/* LIFF 分享鈕：預設藏起來，只有在 LINE 裡才由 JS 顯示。風格沿用 copy 鈕，配 LINE 綠 */
+.modal-line-btn {
+  width: 100%; padding: 15px; margin-top: 11px; display: none;
+  background: linear-gradient(135deg,#06C755,#04a548);
+  border: none; border-radius: 13px; color: white; font-family: 'Iansui','Space Mono',monospace;
+  font-size: 15px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
+}
+.modal-line-btn:hover { opacity: 0.85; }
 
 /* Empty / no-specials */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); font-family: 'Iansui','Space Mono',monospace; font-size: 15px; letter-spacing: 1px; }
@@ -392,6 +400,35 @@ h1 {
 
 <script src="character-data.js"></script>
 <script src="character-app.js"></script>
+
+<!-- ===== LIFF 整合（防呆：非 LINE 環境完全無感）===== -->
+<!-- 1) 載入 LIFF SDK。defer + onerror：抓不到（離線/非LINE）就靜默跳過，不擋主程式 -->
+<script
+  defer
+  src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+  onerror="window.__liffSdkFailed=true;"></script>
+<script>
+  // ↓↓↓ 把這裡換成你的 LIFF ID（例如 "1657064184-Xxxxxxxx"）↓↓↓
+  const LIFF_ID = "2010528749-9JDorvZk";
+
+  // 等頁面載入後再嘗試初始化，全程包在 try/catch，失敗只印警告
+  window.addEventListener('load', async () => {
+    try {
+      if (window.__liffSdkFailed || typeof liff === 'undefined') return; // SDK 沒載到 → 跳過
+      if (!LIFF_ID || LIFF_ID.startsWith('__PUT')) return;                // 還沒填 ID → 跳過
+      await liff.init({ liffId: LIFF_ID });
+      // 只有「真的在 LINE 裡」且分享功能可用，才顯示分享鈕
+      if (liff.isInClient && liff.isInClient() &&
+          liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+        window.__liffReady = true;
+        if (typeof showLineShareButton === 'function') showLineShareButton();
+      }
+    } catch (e) {
+      console.warn('LIFF 初始化略過：', e);  // 一般瀏覽器/PWA 走到這裡，無害
+    }
+  });
+</script>
+
 <script>
   // 註冊 Service Worker（需要 HTTPS 或 localhost）
   if ('serviceWorker' in navigator) {
