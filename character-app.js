@@ -1,6 +1,9 @@
 // character-app.js
 // 主程式邏輯。一般更新資料時不需要改這個檔案。
 
+// 暫存區上限（定義在最上方，確保任何函式呼叫時都已就緒）
+const MAX_STASH = 5;
+
 // ===== RULE HELPERS =====
 function findByName(arr, name){ return arr.find(x => x.name === name); }
 function hasForcedBangs(length){ return !!length?.forceBangs; }
@@ -427,10 +430,19 @@ function doModalCopy(){
       setTimeout(()=>{btn.textContent='複製到剪貼簿';},2000);
     }
   };
-  // 嘗試現代 clipboard API；失敗則用 execCommand 備援
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(markCopied).catch(()=>fallbackCopy(text,markCopied));
-  } else {
+  // clipboard 在 LINE/部分手機環境會「同步 throw」而非 reject，必須整段包 try/catch
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      const r = navigator.clipboard.writeText(text);
+      if(r && typeof r.then==='function'){
+        r.then(markCopied).catch(()=>fallbackCopy(text,markCopied));
+      } else {
+        markCopied();
+      }
+    } else {
+      fallbackCopy(text, markCopied);
+    }
+  }catch(e){
     fallbackCopy(text, markCopied);
   }
 }
