@@ -324,11 +324,13 @@ function openCopyModal(){
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e=>{ if(e.target===overlay) closeCopyModal(); });
   updatePreview();
-  // 若在 LINE 環境（LIFF 已就緒），顯示分享鈕；否則維持隱藏，其他人完全看不到
-  if(window.__liffReady){
-    const lb=document.getElementById('lineShareBtn');
-    if(lb) lb.style.display='block';
-  }
+  // 顯示分享鈕：只要在 LINE 內就顯示（能不能分享按下去再判斷，避免 isApiAvailable 誤判而藏鈕）
+  try{
+    if(typeof liff!=='undefined' && liff.isInClient && liff.isInClient()){
+      const lb=document.getElementById('lineShareBtn');
+      if(lb) lb.style.display='block';
+    }
+  }catch(e){ /* 非 LINE 環境，維持隱藏 */ }
 }
 
 function closeCopyModal(){
@@ -416,12 +418,34 @@ function doModalCopy(){
   } else {
     text=buildText(copyModalLang);
   }
-  navigator.clipboard.writeText(text).then(()=>{
+  // 先存暫存區，跟複製成敗脫鉤（LINE 內嵌瀏覽器 clipboard 常失敗，之前因此漏存）
+  saveToStash();
+  const markCopied=()=>{
     const btn=document.querySelector('.modal-copy-btn');
-    btn.innerHTML=`<img class="title-img" src="${UI_ICONS.success}" alt=""> 已複製！`;
-    setTimeout(()=>{btn.textContent='複製到剪貼簿';},2000);
-    saveToStash();
-  });
+    if(btn){
+      btn.innerHTML=`<img class="title-img" src="${UI_ICONS.success}" alt=""> 已複製！`;
+      setTimeout(()=>{btn.textContent='複製到剪貼簿';},2000);
+    }
+  };
+  // 嘗試現代 clipboard API；失敗則用 execCommand 備援
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(markCopied).catch(()=>fallbackCopy(text,markCopied));
+  } else {
+    fallbackCopy(text, markCopied);
+  }
+}
+
+function fallbackCopy(text, onDone){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(onDone) onDone();
+  }catch(e){ console.warn('複製失敗（已存暫存）：', e); }
 }
 
 // ===== LIFF 分享（只有在 LINE 裡才會被觸發）=====
@@ -440,15 +464,15 @@ function doLineShare(){
     text=buildText(copyModalLang);
   }
   try{
-    if(typeof liff==='undefined' || !liff.isApiAvailable || !liff.isApiAvailable('shareTargetPicker')){
+    if(typeof liff==='undefined' || !liff.shareTargetPicker){
       alert('分享功能僅在 LINE 內可用');
       return;
     }
+    saveToStash(); // 分享前先存暫存，與分享成敗脫鉤
     liff.shareTargetPicker([{ type:'text', text }])
       .then(()=>{
         const btn=document.getElementById('lineShareBtn');
         if(btn){ btn.textContent='已開啟分享！'; setTimeout(()=>{btn.textContent='分享到 LINE';},2000); }
-        saveToStash();
       })
       .catch(err=>{ console.warn('分享取消或失敗：', err); });
   }catch(e){
